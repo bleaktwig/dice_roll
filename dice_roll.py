@@ -4,23 +4,24 @@ import random
 from copy import deepcopy
 
 # Set constants.
-INSTRCTN_ARR: list[str] = ['d', 'r', 't', 'l', 'h', 'A', 'D', 'E']
-SPEC_ARR: list[str] = ['r', 't', 'l', 'h']
-SPEC_DEFS: dict[str, int] = {spec: 0 for spec in SPEC_ARR}
+INSTRCTN_ARR: list[str] = ['d', 'r', 't', 'l', 'h', 'A', 'D', 'E'] # instrctns.
+SPEC_ARR: list[str] = ['r', 't', 'l', 'h'] # list of specs.
+SPEC_DEFS: dict[str, int] = {spec: 0 for spec in SPEC_ARR} # spec def. values.
 N_FREQTEST: int = int(1e5) # Number of rolls for a frequentist test.
+REGULAR_POLYHEDRA: list[int] = [4, 6, 8, 10, 12, 20, 100] # regular polyhedra.
 
 class dice:
     """
-    struct for the dice to be rolled.
+    Class for the dice to be rolled.
 
     args:
-        n_faces           : number of faces in the die.
-        n_rolls           : number of dice to be rolled.
-        n_rerolls         : maximum number of allowed re-rolls, set to -1 for
+        n_faces           : Number of faces in the die.
+        n_rolls           : Number of dice to be rolled.
+        n_rerolls         : Maximum number of allowed re-rolls, set to -1 for
                             unlimited.
-        reroll_threshold  : if roll is equal or lower than this number, re-roll.
-        n_lowest_dropped  : number of the minimum rolls to drop.
-        n_highest_dropped : number of the maximum rolls to drop.
+        reroll_threshold  : If roll is equal or lower than this number, re-roll.
+        n_lowest_dropped  : Number of the minimum rolls to drop.
+        n_highest_dropped : Number of the maximum rolls to drop.
     """
     n_faces: int
     n_rolls: int
@@ -49,7 +50,7 @@ class dice:
 
     def set(self, s: str, v: int):
         """Set a dice parameter using a char."""
-        if s   == 'r' and v == 0: self.n_rerolls = -1
+        if s == 'r' and v == 0: self.n_rerolls = -1
         elif s == 'r': self.n_rerolls         = v
         elif s == 't': self.reroll_threshold  = v
         elif s == 'l': self.n_lowest_dropped  = v
@@ -80,7 +81,7 @@ class dice:
 
         # n_rolls.
         if self.n_rolls <= 0:
-            raise ValueError("Number of rolls cannot be 0.")
+            raise ValueError("Number of rolls should be greater than 0.")
 
         # n_rerolls and threshold.
         if bool(self.n_rerolls) != bool(self.reroll_threshold):
@@ -92,10 +93,10 @@ class dice:
         if bool(self.n_lowest_dropped) and bool(self.n_highest_dropped):
             print("Warning: dropping lowest and highest dice. Is that ok?")
         if self.n_lowest_dropped + self.n_highest_dropped > self.n_rolls:
-            raise ValueError("More dice dropped than number of dice.")
+            raise ValueError("More dice dropped than total dice rolled.")
 
     def roll(self) -> int:
-        """Roll one die from the object."""
+        """Roll one die from the dice object."""
         # Roll the die.
         x: int = random.choice(range(self.n_faces)) + 1
 
@@ -111,11 +112,9 @@ class dice:
         # Roll the dice.
         rolls: list[int] = [self.roll() for _ in range(self.n_rolls)]
 
-        # Remove lowest or highest if needed.
-        for _ in range(self.n_lowest_dropped):
-            rolls.remove(min(rolls))
-        for _ in range(self.n_highest_dropped):
-            rolls.remove(max(rolls))
+        # Remove lowest or highest if needed and rerolls remain.
+        for _ in range(self.n_lowest_dropped):  rolls.remove(min(rolls))
+        for _ in range(self.n_highest_dropped): rolls.remove(max(rolls))
 
         # Return sum of rolls.
         return sum(rolls)
