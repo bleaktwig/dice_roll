@@ -50,6 +50,7 @@ class dice:
 
     def set(self, s: str, v: int):
         """Set a dice parameter using a char."""
+
         if s == 'r' and v == 0: self.n_rerolls = -1
         elif s == 'r': self.n_rerolls         = v
         elif s == 't': self.reroll_threshold  = v
@@ -147,20 +148,19 @@ def run_parser() -> argparse.Namespace:
     parser.add_argument("-f", "--freqtest", help = HELP_F, action="store_true")
     return parser.parse_args()
 
-def main() -> int:
-    # Parse arguments.
-    args: argparse.Namespace = run_parser()
-
-    # Sanitize & Process optional arguments.
+def get_opt_args(args: argparse.Namespace) -> int:
+    """Sanitize & process optional arguments."""
     if args.freqtest and args.ntests is not None:
         raise ValueError("--freqtest and --ntests are incompatible args.")
-    n_tests: int = 1
-    if args.ntests is not None: n_tests = args.ntests
-    if args.freqtest:           n_tests = N_FREQTEST
 
-    # Process rolls string.
+    if args.ntests is not None: return args.ntests
+    if args.freqtest:           return N_FREQTEST
+    return 1
+
+def process_rolls(rolls: str) -> list[dice]:
+    """Process roll instruction from string and generate list of dice."""
     dice_arr: list[dice] = []
-    for spec in args.rolls:
+    for spec in rolls:
         # Get instruction.
         instruction: list[bool] = [bool(spec.find(x)+1) for x in INSTRCTN_ARR]
 
@@ -185,38 +185,52 @@ def main() -> int:
             dice_arr[-1].n_rolls = 3
             dice_arr[-1].add_spec("l2")
 
-    # Sanitize dice.
-    for d in dice_arr:
-        d.sanitize()
+    return dice_arr
 
-    # Print header.
+def print_header(dice_arr: list[dice]):
+    """Print header for both frequentist test and normal rolling."""
     print("        | ", end = '')
     for d in dice_arr:
         print("%5s " % ("%dd%d" % (d.n_rolls, d.n_faces)), end = '')
 
-    # Roll and print results.
-    if n_tests == N_FREQTEST:
-        sum_arr: list[int] = [0 for _ in dice_arr]
-        # Make rolls and update sum.
-        for i_test in range(n_tests):
-            for i_die, d in enumerate(dice_arr):
-                sum_arr[i_die] += deepcopy(d).roll_n()
+def perform_freqtest(dice_arr: list[dice]):
+    """Perform a frequency test and print roll averages."""
+    sum_arr: list[int] = [0 for _ in dice_arr]
 
-        # Print frequentist test result.
-        if n_tests == N_FREQTEST:
-            print("\nAverage | ", end = '')
-            for result in sum_arr:
-                print("%5.1f " % (result / n_tests), end = '')
+    # Make rolls and update sum.
+    for i_test in range(N_FREQTEST):
+        for i_die, d in enumerate(dice_arr):
+            sum_arr[i_die] += deepcopy(d).roll_n()
 
-    # Otherwise, roll and print result.
-    else:
-        for i_test in range(n_tests):
-            print("\nRoll %2d | " % (i_test+1), end = '')
-            for result in [d.roll_n() for d in deepcopy(dice_arr)]:
-                print("%5d " % result, end = '')
-
-    # End the line.
+    # Print test result.
+    print_header(dice_arr)
+    print("\nAverage | ", end = '')
+    for result in sum_arr:
+        print("%5.1f " % (result / N_FREQTEST), end = '')
     print('')
+
+def make_rolls(dice_arr: list[dice], n_tests: int):
+    """Make rolls and print results."""
+    print_header(dice_arr)
+    for i_test in range(n_tests):
+        print("\nRoll %2d | " % (i_test+1), end = '')
+        for result in [d.roll_n() for d in deepcopy(dice_arr)]:
+            print("%5d " % result, end = '')
+    print('')
+
+def main() -> int:
+    # Parse arguments.
+    args: argparse.Namespace = run_parser()
+    n_tests: int = get_opt_args(args)
+    dice_arr: list[dice] = process_rolls(args.rolls)
+
+    # Sanitize dice.
+    for d in dice_arr:
+        d.sanitize()
+
+    # Roll and print results.
+    if n_tests == N_FREQTEST: perform_freqtest(dice_arr)
+    else:                     make_rolls(dice_arr, n_tests)
 
     return 0
 
