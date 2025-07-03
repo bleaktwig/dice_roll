@@ -14,6 +14,8 @@ number of different arguments, such that one roll can be:
 
 `AdX [rR] [tT] [lL] [hH] [A] [D] [E]`
 * `AdX`   : Roll a number of A X-sided dice.
+* `+B`    : Add B to the roll.
+* `-P`    : Subtract P from the roll.
 * `rR tT` : Re-roll all rolls that result in a number equal
             or lower than T. The maximum number of rerolls
             allowed is R. You can set R to 0 to allow for

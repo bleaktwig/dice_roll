@@ -4,8 +4,8 @@ import random
 from copy import deepcopy
 
 # Set constants.
-INSTRCTN_ARR: list[str] = ['d', 'r', 't', 'l', 'h', 'A', 'D', 'E'] # instrctns.
-SPEC_ARR: list[str] = ['r', 't', 'l', 'h'] # list of specs.
+INSTRCTN_ARR: list[str] = ['d', '+', '-', 'r', 't', 'l', 'h', 'A', 'D', 'E']
+SPEC_ARR: list[str] = ['+', '-', 'r', 't', 'l', 'h'] # list of specs.
 SPEC_DEFS: dict[str, int] = {spec: 0 for spec in SPEC_ARR} # spec def. values.
 N_FREQTEST: int = int(1e5) # Number of rolls for a frequentist test.
 REGULAR_POLYHEDRA: list[int] = [4, 6, 8, 10, 12, 20, 100] # regular polyhedra.
@@ -17,6 +17,7 @@ class dice:
     args:
         n_faces           : Number of faces in the die.
         n_rolls           : Number of dice to be rolled.
+        bonus             : Bonus (or penalty) applied to the roll.
         n_rerolls         : Maximum number of allowed re-rolls, set to -1 for
                             unlimited.
         reroll_threshold  : If roll is equal or lower than this number, re-roll.
@@ -25,6 +26,7 @@ class dice:
     """
     n_faces: int
     n_rolls: int
+    bonus: int = SPEC_DEFS['+']
     n_rerolls: int = SPEC_DEFS['r']
     reroll_threshold: int = SPEC_DEFS['t']
     n_lowest_dropped: int = SPEC_DEFS['l']
@@ -42,6 +44,8 @@ class dice:
 
     def get(self, s: str) -> int:
         """Get a dice parameter using a char."""
+        if s == '+': return self.bonus
+        if s == '-': return self.bonus
         if s == 'r': return self.n_rerolls
         if s == 't': return self.reroll_threshold
         if s == 'l': return self.n_lowest_dropped
@@ -50,8 +54,9 @@ class dice:
 
     def set(self, s: str, v: int):
         """Set a dice parameter using a char."""
-
-        if s == 'r' and v == 0: self.n_rerolls = -1
+        if   s == '+': self.bonus += v
+        elif s == '-': self.bonus -= v
+        elif s == 'r' and v == 0: self.n_rerolls = -1
         elif s == 'r': self.n_rerolls         = v
         elif s == 't': self.reroll_threshold  = v
         elif s == 'l': self.n_lowest_dropped  = v
@@ -66,7 +71,10 @@ class dice:
         val: str = SPEC_ARR[val_arr.index(True)]
 
         if self.get(val) != SPEC_DEFS[val]:
-            raise ValueError("Invalid roll. `%s` is set twice." % val)
+            if val == '+' or val == '-':
+                print("Warning: included a bonus and a penalty to the roll.")
+            else:
+                raise ValueError("Invalid roll. `%s` is set twice." % val)
 
         spec_arr: list[str] = spec.split(val)
         if len(spec_arr) != 2 or not str.isdigit(spec_arr[1]):
@@ -106,7 +114,7 @@ class dice:
             self.n_rerolls -= 1
             x = self.roll()
 
-        return x
+        return x + self.bonus
 
     def roll_n(self) -> int:
         """Roll all dice in the object."""
@@ -125,6 +133,7 @@ class dice:
         print("Dice is:")
         print("  * n_faces           : %d" % self.n_faces)
         print("  * n_rolls           : %d" % self.n_rolls)
+        print("  * bonus             : %d" % self.bonus)
         print("  * n_rerolls         : %d" % self.n_rerolls)
         print("  * reroll_threshold  : %d" % self.reroll_threshold)
         print("  * n_lowest_dropped  : %d" % self.n_lowest_dropped)
@@ -171,17 +180,17 @@ def process_rolls(rolls: str) -> list[dice]:
             dice_arr.append(dice(spec))
         elif len(dice_arr) == 0:
             raise ValueError("Define dice before adding specs to it.")
-        elif any(instruction[1:5]): # 'r', 't', 'l', and 'h'.
+        elif any(instruction[1:7]): # '+', '-', 'r', 't', 'l', and 'h'.
             dice_arr[-1].add_spec(spec)
-        elif any(instruction[5:7]) and dice_arr[-1].n_rolls != 1:
+        elif any(instruction[7:9]) and dice_arr[-1].n_rolls != 1:
             raise ValueError("A, D, and E only work if n_rolls is 1.")
-        elif instruction[5]: # 'A'.
+        elif instruction[7]: # 'A'.
             dice_arr[-1].n_rolls = 2
             dice_arr[-1].add_spec("l1")
-        elif instruction[6]: # 'D'.
+        elif instruction[8]: # 'D'.
             dice_arr[-1].n_rolls = 2
             dice_arr[-1].add_spec("h1")
-        elif instruction[7]: # 'E'.
+        elif instruction[9]: # 'E'.
             dice_arr[-1].n_rolls = 3
             dice_arr[-1].add_spec("l2")
 
